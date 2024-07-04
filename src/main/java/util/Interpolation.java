@@ -3,65 +3,23 @@ package util;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.types.DataTypes;
 
 import static java.lang.Math.atan2;
 import static java.lang.Math.cos;
 import static java.lang.Math.sin;
 import static java.lang.Math.sqrt;
-import static org.apache.spark.sql.functions.callUDF;
-import static org.apache.spark.sql.functions.col;
-import static org.apache.spark.sql.functions.pow;
-import static org.apache.spark.sql.functions.round;
-import static org.apache.spark.sql.functions.sum;
+import static org.apache.spark.sql.types.DataTypes.DoubleType;
 import static util.Math.DEGREES_TO_RADIANS;
 
 public class Interpolation {
     public static Dataset<Row> inverseDistanceWeightingAlgorithm(SparkSession spark, Dataset<Row> knownLocations, Dataset<Row> unknownLocations) {
-        Dataset<Row> crossJoined = unknownLocations.crossJoin(knownLocations);
-
-        spark.udf().register("calculateDistance", (Double lat1, Double lon1, Double lat2, Double lon2) -> getDistanceBetweenTwoPoints(lat1, lon1, lat2, lon2), DataTypes.DoubleType);
-
-        Dataset<Row> withDistances = crossJoined.withColumn("distance", callUDF("calculateDistance",
-                crossJoined.col("unknownLatitude"),
-                crossJoined.col("unknownLongitude"),
-                crossJoined.col("knownLatitude"),
-                crossJoined.col("knownLongitude")));
-
-        crossJoined.unpersist();
-
-        Dataset<Row> withDistancePoweredToPowerParameter = withDistances.withColumn("weight", pow(col("distance"), -3));
-
-        withDistances.unpersist();
-
-        Dataset<Row> withWeightedTemperatures = withDistancePoweredToPowerParameter.withColumn("weightedTemperature", col("knownTemperature").multiply(col("weight")));
-
-        withDistancePoweredToPowerParameter.unpersist();
-
-        Dataset<Row> weightedSum = withWeightedTemperatures.groupBy("unknownLatitude", "unknownLongitude")
-                .agg(sum("weightedTemperature").alias("sumWeightedTemperature"),
-                sum("weight").alias("sumWeight"));
-
-        withWeightedTemperatures.unpersist();
-
-        Dataset<Row> predictedLocations = weightedSum.withColumn("predictedTemperature", round(col("sumWeightedTemperature").divide(col("sumWeight")), 1));
-
-        weightedSum.unpersist();
-
-        return predictedLocations.select("unknownLatitude", "unknownLongitude", "predictedTemperature")
-                .withColumnRenamed("unknownLatitude", "latitude")
-                .withColumnRenamed("unknownLongitude", "longitude")
-                .withColumnRenamed("predictedTemperature", "temperature");
-    }
-
-    public static Dataset<Row> sqlVersionOfInverseDistanceWeightingAlgorithm(SparkSession spark, Dataset<Row> knownLocations, Dataset<Row> unknownLocations) {
         knownLocations.createOrReplaceTempView("knownLocations");
         unknownLocations.createOrReplaceTempView("unknownLocations");
 
         Dataset<Row> crossJoined = spark.sql("SELECT unknownLocations.*, knownLocations.* FROM unknownLocations CROSS JOIN knownLocations");
         crossJoined.createOrReplaceTempView("crossJoined");
 
-        spark.udf().register("calculateDistance", (Double lat1, Double lon1, Double lat2, Double lon2) -> getDistanceBetweenTwoPoints(lat1, lon1, lat2, lon2), DataTypes.DoubleType);
+        spark.udf().register("calculateDistance", (Double lat1, Double lon1, Double lat2, Double lon2) -> getDistanceBetweenTwoPoints(lat1, lon1, lat2, lon2), DoubleType);
 
         Dataset<Row> withDistances = spark.sql("SELECT crossJoined.*, calculateDistance(unknownLatitude, unknownLongitude, knownLatitude, knownLongitude) AS distance FROM crossJoined");
         crossJoined.unpersist();
