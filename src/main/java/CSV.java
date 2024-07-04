@@ -11,7 +11,7 @@ public class CSV {
         final long checkpoint1 = System.currentTimeMillis();
 
         SparkSession spark = SparkSession.builder()
-                .appName("Test")
+                .appName("Spatial-Interpolation")
                 .master("local[*]")
                 .getOrCreate();
 

@@ -9,7 +9,7 @@ public class Parquet {
         final long checkpoint1 = System.currentTimeMillis();
 
         SparkSession spark = SparkSession.builder()
-                .appName("Test")
+                .appName("Spatial-Interpolation")
                 .config("spark.driver.maxResultSize", "2g")
                 .master("local[*]")
                 .getOrCreate();
