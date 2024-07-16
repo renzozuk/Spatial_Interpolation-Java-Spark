@@ -1,7 +1,7 @@
 <h1 align="center"> Spatial Interpolation </h1>
 
 <p align="justify"> In this repository, the inverse distance weighting algorithm is used concurrently with the Spark Framework. <br>
-There are 3 branchs in this repository: Spark RDD, Spark Dataframe and Spark SQL.</p>
+There are 3 branches in this repository: Spark RDD, Spark Dataframe and Spark SQL.</p>
 
 ## The algorithm
 
